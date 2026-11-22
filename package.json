@@ -11,7 +11,8 @@
     "dev": "electron . --dev",
     "build:web": "node scripts/build-web.js",
     "android:sync": "node scripts/build-web.js && npx cap sync android",
-    "android:open": "npx cap open android"
+    "android:open": "npx cap open android",
+    "version:bump": "node scripts/bump-version.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.2",

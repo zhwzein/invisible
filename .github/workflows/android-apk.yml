@@ -27,6 +27,9 @@ jobs:
       - name: Install dependencies
         run: npm install --ignore-scripts
 
+      - name: Auto-bump Android version from CI run number
+        run: node scripts/bump-version.js --ci-run ${{ github.run_number }}
+
       - name: Build web assets & sync Capacitor Android
         run: |
           node scripts/build-web.js
@@ -41,6 +44,6 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: invisible-android-apk
+          name: invisible-android-apk-v1.0.${{ github.run_number }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
