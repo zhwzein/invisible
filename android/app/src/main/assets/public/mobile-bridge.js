@@ -50,16 +50,32 @@
         if (input.parentNode) input.parentNode.removeChild(input);
       };
 
+      let settled = false;
+      const done = (val) => {
+        if (settled) return;
+        settled = true;
+        window.removeEventListener('focus', onFocusReturn);
+        cleanup();
+        resolve(val);
+      };
+
+      const onFocusReturn = () => {
+        setTimeout(() => {
+          if (!settled && (!input.files || !input.files.length)) {
+            done(null);
+          }
+        }, 400);
+      };
+
       input.addEventListener('change', () => {
         const file = input.files && input.files[0];
-        cleanup();
-        if (!file) return resolve(null);
+        if (!file) return done(null);
 
         const reader = new FileReader();
-        reader.onerror = () => resolve(null);
+        reader.onerror = () => done(null);
         reader.onload = () => {
           const img = new Image();
-          img.onerror = () => resolve(null);
+          img.onerror = () => done(null);
           img.onload = () => {
             const longEdge = Math.max(img.width, img.height);
             const ratio = longEdge > MAX_IMAGE_EDGE ? MAX_IMAGE_EDGE / longEdge : 1;
@@ -72,17 +88,15 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, w, h);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
-            resolve(dataUrl.split(',')[1] || null);
+            done(dataUrl.split(',')[1] || null);
           };
           img.src = String(reader.result || '');
         };
         reader.readAsDataURL(file);
       });
 
-      input.addEventListener('cancel', () => {
-        cleanup();
-        resolve(null);
-      });
+      input.addEventListener('cancel', () => done(null));
+      window.addEventListener('focus', onFocusReturn);
 
       input.click();
     });

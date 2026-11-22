@@ -688,6 +688,9 @@ function stopActiveRequest() {
     try { currentAbortController.abort(); } catch {}
     currentAbortController = null;
   }
+  if (cropModal && !cropModal.classList.contains('hidden')) {
+    cropModal.classList.add('hidden');
+  }
   clearPending();
   if (streamingBubble) {
     streamingBubble.bubble.classList.remove('is-streaming');
@@ -1043,6 +1046,7 @@ async function askFollowUp() {
 
 function clearResponse() {
   clearPending();
+  currentSessionId = null;
   chatHistory = [];
   chatLog.replaceChildren();
   chatLog.classList.add('hidden');

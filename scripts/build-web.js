@@ -19,7 +19,7 @@ fs.copyFileSync(path.join(root, 'lib', 'providers.js'), path.join(wwwLib, 'provi
 
 let html = fs.readFileSync(path.join(root, 'renderer', 'index.html'), 'utf8');
 // Allow HTTPS/HTTP API calls in Android WebView
-html = html.replace("connect-src 'self'", "connect-src 'self' https: http:");
+html = html.replace(/connect-src 'self'(?!\s+https:)/, "connect-src 'self' https: http:");
 // Load mobile bridge before providers.js and point providers.js to local lib/
 html = html.replace(
   '<script src="../lib/providers.js"></script>',

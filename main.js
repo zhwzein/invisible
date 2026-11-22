@@ -20,10 +20,12 @@ const DEFAULT_CONFIG = {
   customKey: '',
   customModel: '',
   userContext: '',
+  customSystemPrompt: '',
   knowledgeFolder: '',
   knowledgeEnabled: true,
   opacity: 0.85,
-  alwaysOnTop: true
+  alwaysOnTop: true,
+  keepFocus: false
 };
 
 // Resolved lazily: app.getPath('userData') is only valid after the app module

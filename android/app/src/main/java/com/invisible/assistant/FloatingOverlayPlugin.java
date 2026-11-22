@@ -35,12 +35,14 @@ public class FloatingOverlayPlugin extends Plugin {
     }
 
     public static void emitCapturedScreen(String base64) {
-        pendingScreenshotBase64 = base64;
         FloatingOverlayPlugin inst = activeInstance;
-        if (inst != null) {
+        if (inst != null && inst.hasListeners("screenCaptured")) {
+            pendingScreenshotBase64 = null;
             JSObject data = new JSObject();
             data.put("base64", base64);
             inst.notifyListeners("screenCaptured", data, true);
+        } else {
+            pendingScreenshotBase64 = base64;
         }
     }
 

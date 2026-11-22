@@ -393,6 +393,12 @@ public class FloatingOverlayService extends Service {
         }
 
         mainHandler.postDelayed(() -> {
+            if (mediaProjection == null) {
+                capturing = false;
+                if (rootView != null) rootView.setVisibility(View.VISIBLE);
+                bringAppToFront();
+                return;
+            }
             DisplayMetrics metrics = getResources().getDisplayMetrics();
             int width = metrics.widthPixels;
             int height = metrics.heightPixels;
@@ -404,17 +410,26 @@ public class FloatingOverlayService extends Service {
             int capW = Math.max(1, Math.round(width * scale));
             int capH = Math.max(1, Math.round(height * scale));
 
-            ImageReader reader = ImageReader.newInstance(capW, capH, PixelFormat.RGBA_8888, 2);
-            VirtualDisplay virtualDisplay = mediaProjection.createVirtualDisplay(
-                "InvisibleCapture",
-                capW,
-                capH,
-                density,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                reader.getSurface(),
-                null,
-                mainHandler
-            );
+            ImageReader reader;
+            VirtualDisplay virtualDisplay;
+            try {
+                reader = ImageReader.newInstance(capW, capH, PixelFormat.RGBA_8888, 2);
+                virtualDisplay = mediaProjection.createVirtualDisplay(
+                    "InvisibleCapture",
+                    capW,
+                    capH,
+                    density,
+                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                    reader.getSurface(),
+                    null,
+                    mainHandler
+                );
+            } catch (Exception e) {
+                capturing = false;
+                if (rootView != null) rootView.setVisibility(View.VISIBLE);
+                showAnswerPopupInternal("Screen capture expired. Restart Float.", false);
+                return;
+            }
 
             reader.setOnImageAvailableListener(r -> {
                 Image image = null;
@@ -524,7 +539,7 @@ public class FloatingOverlayService extends Service {
             answerScrollView = new ScrollView(this);
             LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+                maxBodyHeight
             );
             answerScrollView.setLayoutParams(scrollLp);
 
@@ -532,7 +547,6 @@ public class FloatingOverlayService extends Service {
             answerTextView.setTextColor(Color.parseColor("#f3f4f8"));
             answerTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
             answerTextView.setLineSpacing(dp(3), 1f);
-            answerTextView.setMaxHeight(maxBodyHeight);
             answerScrollView.addView(answerTextView);
 
             card.addView(header);
