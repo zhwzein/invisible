@@ -78,6 +78,9 @@ const alwaysOnTopToggle = $('alwaysOnTopToggle');
 const keepFocusToggle = $('keepFocusToggle');
 const closeSettingsBtn = $('closeSettingsBtn');
 const settingsBtn = $('settingsBtn');
+const floatingBtn = $('floatingBtn');
+const settingsFloatingBtn = $('settingsFloatingBtn');
+const floatingStatusSub = $('floatingStatusSub');
 const minimizeBtn = $('minimizeBtn');
 const closeBtn = $('closeBtn');
 
@@ -1041,6 +1044,50 @@ function focusQuestionInput() {
   grab(0);
 }
 
+// ─── Mobile Floating Overlay ────────────────────────────────────────────────
+let floatingActive = false;
+
+function syncFloatingUI(active) {
+  floatingActive = Boolean(active);
+  if (floatingBtn) {
+    floatingBtn.classList.toggle('is-active', floatingActive);
+    floatingBtn.title = floatingActive ? 'Stop Floating Overlay' : 'Start Floating Overlay';
+  }
+  if (settingsFloatingBtn) {
+    settingsFloatingBtn.textContent = floatingActive ? 'Stop Float' : 'Start Float';
+  }
+  if (floatingStatusSub) {
+    floatingStatusSub.textContent = floatingActive
+      ? 'Floating bubble is active over other apps. Tap it to scan.'
+      : 'Shows a private bubble over any app to scan what you are viewing.';
+  }
+}
+
+async function toggleFloatingOverlay() {
+  if (!api || !api.isMobile) return;
+  if (floatingActive) {
+    await api.stopFloatingOverlay();
+    syncFloatingUI(false);
+    showToast('Floating overlay stopped');
+    return;
+  }
+  const res = await api.startFloatingOverlay();
+  if (res && res.needsOverlayPermission) {
+    showToast('Grant "Display over other apps" permission, then tap Float again');
+  } else if (res && res.started) {
+    syncFloatingUI(true);
+    closeSettingsPanel();
+  } else if (res && res.cancelled) {
+    showToast('Screen capture permission cancelled');
+  }
+}
+
+if (floatingBtn) floatingBtn.addEventListener('click', toggleFloatingOverlay);
+if (settingsFloatingBtn) settingsFloatingBtn.addEventListener('click', toggleFloatingOverlay);
+if (api && typeof api.onOverlayStateChanged === 'function') {
+  api.onOverlayStateChanged(syncFloatingUI);
+}
+
 // ─── Start ──────────────────────────────────────────────────────────────────
 async function init() {
   try {
@@ -1048,6 +1095,17 @@ async function init() {
     if (savedConfig) appConfig = { ...DEFAULT_CONFIG, ...savedConfig };
   } catch (err) {
     console.error('Failed to load config:', err);
+  }
+
+  if (api && api.isMobile) {
+    const labelSpan = captureBtn.querySelector('span');
+    if (labelSpan) labelSpan.textContent = 'Pick Image';
+    if (typeof api.checkOverlayPermissions === 'function') {
+      try {
+        const perm = await api.checkOverlayPermissions();
+        syncFloatingUI(Boolean(perm && perm.active));
+      } catch {}
+    }
   }
 
   applyConfigToAI();

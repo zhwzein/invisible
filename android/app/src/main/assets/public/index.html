@@ -9,7 +9,8 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0b0e">
   <meta http-equiv="Content-Security-Policy"
     content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; object-src 'none'; base-uri 'none'; connect-src 'self' https: http:">
   <title>Invisible</title>
@@ -35,6 +36,17 @@
         </div>
       </div>
       <div class="titlebar-controls">
+        <button class="ctrl-btn mobile-only" id="floatingBtn" type="button" title="Floating Overlay" aria-label="Floating Overlay">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="3" />
+            <rect x="11" y="10" width="8" height="7" rx="1.5" />
+          </svg>
+        </button>
+        <a class="ctrl-btn" id="githubBtn" href="https://github.com/zhwzein/invisible" target="_blank" rel="noreferrer noopener" title="Source Code (GitHub)" aria-label="Source Code on GitHub">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21" />
+          </svg>
+        </a>
         <button class="ctrl-btn" id="settingsBtn" type="button" title="Settings" aria-label="Settings">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="3" />
@@ -93,13 +105,22 @@
           </svg>
         </div>
         <h3>Ready when you are</h3>
-        <p>Press <kbd>Alt+C</kbd> or hit <strong>Capture &amp; Analyze</strong>.</p>
-        <div class="welcome-chips">
+        <p class="desktop-only">Press <kbd>Alt+C</kbd> or hit <strong>Capture &amp; Analyze</strong>.</p>
+        <p class="mobile-only">Tap <strong>Float</strong> to overlay over other apps &amp; scan any screen, or pick an image below.</p>
+        <div class="welcome-chips desktop-only">
           <span><kbd>Alt+S</kbd> Hide</span>
           <span><kbd>Alt+I</kbd> Type</span>
           <span><kbd>Alt+T</kbd> Opacity</span>
         </div>
+        <div class="welcome-chips mobile-only">
+          <span>Floating Bubble</span>
+          <span>Screen Scan</span>
+          <span>Private</span>
+        </div>
         <p class="hint">Invisible to screen recordings &amp; screenshots.</p>
+        <a class="welcome-repo" href="https://github.com/zhwzein/invisible" target="_blank" rel="noreferrer noopener">
+          github.com/zhwzein/invisible
+        </a>
       </div>
       <div id="chatLog" class="hidden" role="log" aria-live="polite"></div>
     </section>
@@ -219,69 +240,93 @@
             restart.</p>
         </div>
 
-        <p class="section-label">Knowledge folder</p>
-
-        <div class="form-group">
-          <label for="knowledgeFolderInput">Folder with PDFs, text, or images <span class="optional">optional</span></label>
-          <div class="path-row">
-            <input type="text" id="knowledgeFolderInput" placeholder="No folder selected" readonly />
-            <button class="btn btn-ghost" id="pickFolderBtn" type="button">Browse</button>
+        <div class="mobile-only">
+          <p class="section-label">Floating Overlay</p>
+          <div class="floating-card">
+            <div class="floating-card-text">
+              <span class="toggle-title">Float over other apps</span>
+              <span class="toggle-sub" id="floatingStatusSub">Shows a private bubble over any app to scan what you are viewing.</span>
+            </div>
+            <button class="btn btn-primary" id="settingsFloatingBtn" type="button">Start Float</button>
           </div>
-          <p class="field-hint">PDFs and text files are read once and indexed locally; images are sent to the model as pictures. Everything is re-indexed by itself when a file changes, and a screenshot answer also draws on this folder.</p>
         </div>
 
-        <div class="knowledge-status" id="knowledgeStatus">
-          <span class="knowledge-dot" aria-hidden="true"></span>
-          <span id="knowledgeStatusText">No folder selected</span>
-          <button class="link-btn" id="reindexBtn" type="button">Re-index</button>
-        </div>
+        <div class="desktop-only">
+          <p class="section-label">Knowledge folder</p>
 
-        <label class="toggle-row" for="knowledgeToggle">
-          <span class="toggle-text">
-            <span class="toggle-title">Use knowledge folder</span>
-            <span class="toggle-sub">Attach matching passages and the newest images</span>
-          </span>
-          <input type="checkbox" id="knowledgeToggle" checked tabindex="-1" />
-          <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
-        </label>
-
-        <p class="section-label">Window</p>
-
-        <div class="slider-row">
-          <div class="slider-head">
-            <span>Transparency</span>
-            <span class="slider-value" id="opacityValue">85%</span>
+          <div class="form-group">
+            <label for="knowledgeFolderInput">Folder with PDFs, text, or images <span class="optional">optional</span></label>
+            <div class="path-row">
+              <input type="text" id="knowledgeFolderInput" placeholder="No folder selected" readonly />
+              <button class="btn btn-ghost" id="pickFolderBtn" type="button">Browse</button>
+            </div>
+            <p class="field-hint">PDFs and text files are read once and indexed locally; images are sent to the model as pictures. Everything is re-indexed by itself when a file changes, and a screenshot answer also draws on this folder.</p>
           </div>
-          <input type="range" id="opacitySlider" min="20" max="100" step="1" value="85"
-            aria-label="Window transparency" />
+
+          <div class="knowledge-status" id="knowledgeStatus">
+            <span class="knowledge-dot" aria-hidden="true"></span>
+            <span id="knowledgeStatusText">No folder selected</span>
+            <button class="link-btn" id="reindexBtn" type="button">Re-index</button>
+          </div>
+
+          <label class="toggle-row" for="knowledgeToggle">
+            <span class="toggle-text">
+              <span class="toggle-title">Use knowledge folder</span>
+              <span class="toggle-sub">Attach matching passages and the newest images</span>
+            </span>
+            <input type="checkbox" id="knowledgeToggle" checked tabindex="-1" />
+            <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+          </label>
+
+          <p class="section-label">Window</p>
+
+          <div class="slider-row">
+            <div class="slider-head">
+              <span>Transparency</span>
+              <span class="slider-value" id="opacityValue">85%</span>
+            </div>
+            <input type="range" id="opacitySlider" min="20" max="100" step="1" value="85"
+              aria-label="Window transparency" />
+          </div>
+
+          <label class="toggle-row" for="alwaysOnTopToggle">
+            <span class="toggle-text">
+              <span class="toggle-title">Always on top</span>
+              <span class="toggle-sub">Keep the overlay above other windows</span>
+            </span>
+            <input type="checkbox" id="alwaysOnTopToggle" checked tabindex="-1" />
+            <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+          </label>
+
+          <label class="toggle-row" for="keepFocusToggle">
+            <span class="toggle-text">
+              <span class="toggle-title">Keep focus</span>
+              <span class="toggle-sub">Stay focused after clicking the overlay (restarts apply)</span>
+            </span>
+            <input type="checkbox" id="keepFocusToggle" tabindex="-1" />
+            <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+          </label>
+
+          <p class="section-label">Shortcuts</p>
+          <div class="shortcuts-info">
+            <div class="shortcut-item"><kbd>Alt+S</kbd><span>Show / Hide</span></div>
+            <div class="shortcut-item"><kbd>Alt+C</kbd><span>Capture &amp; Analyze</span></div>
+            <div class="shortcut-item"><kbd>Alt+I</kbd><span>Focus Input</span></div>
+            <div class="shortcut-item"><kbd>Alt+T</kbd><span>Transparency</span></div>
+            <div class="shortcut-item"><kbd>Alt+Q</kbd><span>Quit</span></div>
+          </div>
         </div>
 
-        <label class="toggle-row" for="alwaysOnTopToggle">
-          <span class="toggle-text">
-            <span class="toggle-title">Always on top</span>
-            <span class="toggle-sub">Keep the overlay above other windows</span>
-          </span>
-          <input type="checkbox" id="alwaysOnTopToggle" checked tabindex="-1" />
-          <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
-        </label>
-
-        <label class="toggle-row" for="keepFocusToggle">
-          <span class="toggle-text">
-            <span class="toggle-title">Keep focus</span>
-            <span class="toggle-sub">Stay focused after clicking the overlay (restarts apply)</span>
-          </span>
-          <input type="checkbox" id="keepFocusToggle" tabindex="-1" />
-          <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
-        </label>
-
-        <p class="section-label">Shortcuts</p>
-        <div class="shortcuts-info">
-          <div class="shortcut-item"><kbd>Alt+S</kbd><span>Show / Hide</span></div>
-          <div class="shortcut-item"><kbd>Alt+C</kbd><span>Capture &amp; Analyze</span></div>
-          <div class="shortcut-item"><kbd>Alt+I</kbd><span>Focus Input</span></div>
-          <div class="shortcut-item"><kbd>Alt+T</kbd><span>Transparency</span></div>
-          <div class="shortcut-item"><kbd>Alt+Q</kbd><span>Quit</span></div>
-        </div>
+        <p class="section-label">Source Code</p>
+        <a class="source-card" href="https://github.com/zhwzein/invisible" target="_blank" rel="noreferrer noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21" />
+          </svg>
+          <div class="source-card-text">
+            <span class="source-card-title">zhwzein/invisible</span>
+            <span class="source-card-url">https://github.com/zhwzein/invisible</span>
+          </div>
+        </a>
       </div>
     </div>
   </div>

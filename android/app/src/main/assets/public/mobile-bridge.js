@@ -10,6 +10,17 @@
 
   document.documentElement.classList.add('is-mobile');
 
+  let screenshotCb = null;
+  let overlayStateCb = null;
+
+  function getFloatingPlugin() {
+    return (
+      window.Capacitor &&
+      window.Capacitor.Plugins &&
+      window.Capacitor.Plugins.FloatingOverlay
+    ) || null;
+  }
+
   function loadStoredConfig() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -123,9 +134,46 @@
     }
   }
 
+  async function flushPendingScreenshot() {
+    const plugin = getFloatingPlugin();
+    if (!plugin || typeof plugin.consumePendingScreenshot !== 'function' || !screenshotCb) return;
+    try {
+      const res = await plugin.consumePendingScreenshot();
+      if (res && res.base64) {
+        screenshotCb(res.base64);
+      }
+    } catch {}
+  }
+
+  function wireFloatingListeners() {
+    const plugin = getFloatingPlugin();
+    if (!plugin || typeof plugin.addListener !== 'function') return;
+
+    plugin.addListener('screenCaptured', (data) => {
+      if (data && data.base64 && screenshotCb) {
+        screenshotCb(data.base64);
+      }
+    });
+
+    plugin.addListener('overlayStateChanged', (data) => {
+      if (overlayStateCb) {
+        overlayStateCb(Boolean(data && data.active));
+      }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        flushPendingScreenshot();
+      }
+    });
+  }
+
+  wireFloatingListeners();
+
   const noop = () => {};
 
   window.electronAPI = {
+    isMobile: true,
     getConfig: async () => loadStoredConfig(),
     saveConfig: (config) => saveStoredConfig(config),
     captureScreen: () => pickImageAsBase64(),
@@ -141,9 +189,30 @@
     knowledgeRetrieve: async () => ({ ok: true, context: '', matches: [] }),
     knowledgeImages: async () => ({ ok: true, images: [] }),
     onCaptureStart: noop,
-    onScreenshotCaptured: noop,
+    onScreenshotCaptured: (cb) => {
+      screenshotCb = cb;
+      flushPendingScreenshot();
+    },
     onCaptureError: noop,
     onTransparencyChanged: noop,
     onStartTyping: noop,
+    onOverlayStateChanged: (cb) => {
+      overlayStateCb = cb;
+    },
+    checkOverlayPermissions: async () => {
+      const plugin = getFloatingPlugin();
+      if (!plugin) return { overlay: false, active: false };
+      return plugin.checkPermissions();
+    },
+    startFloatingOverlay: async () => {
+      const plugin = getFloatingPlugin();
+      if (!plugin) return { started: false, unsupported: true };
+      return plugin.startFloatingOverlay();
+    },
+    stopFloatingOverlay: async () => {
+      const plugin = getFloatingPlugin();
+      if (!plugin) return { stopped: false };
+      return plugin.stopFloatingOverlay();
+    },
   };
 })();
