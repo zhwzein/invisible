@@ -5,6 +5,12 @@
 
 Invisible is an always-on-top AI overlay for desktop (Electron) and Android (Capacitor) that reads your screen and answers questions while staying hidden from screenshots and screen recordings. It supports Gemini, OpenRouter, and custom OpenAI-compatible endpoints, with local knowledge-folder indexing on desktop and a floating screen-scan bubble on Android.
 
+## Screenshots
+
+| Desktop (Windows) | Android App | Android Floating Overlay |
+| :---: | :---: | :---: |
+| <img src="assets/desktop-ui.png" alt="Invisible desktop overlay on Windows" width="240" /> | <img src="assets/android-ui.jpg" alt="Invisible Android chat interface" width="240" /> | <img src="assets/android-floating.jpg" alt="Invisible floating scan bubble over another Android app" width="240" /> |
+
 ## Requirements
 
 - **Desktop:** Node.js (CI uses Node.js 22) and Windows (uses `SetWindowDisplayAffinity` via `user32.dll` for capture exclusion, with Electron `setContentProtection` as fallback).
