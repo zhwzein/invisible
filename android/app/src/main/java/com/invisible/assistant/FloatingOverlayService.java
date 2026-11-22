@@ -6,6 +6,8 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
@@ -15,6 +17,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PixelFormat;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
@@ -34,7 +37,9 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.core.app.NotificationCompat;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -50,11 +55,18 @@ public class FloatingOverlayService extends Service {
     private static final int MAX_CAPTURE_EDGE = 1440;
 
     private static volatile boolean running = false;
+    private static volatile FloatingOverlayService instance;
 
     private WindowManager windowManager;
     private View rootView;
     private LinearLayout menuContainer;
     private WindowManager.LayoutParams overlayParams;
+
+    private View answerPopupView;
+    private TextView answerTextView;
+    private TextView answerTitleView;
+    private ScrollView answerScrollView;
+    private String lastAnswerText = "";
 
     private MediaProjection mediaProjection;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -63,6 +75,18 @@ public class FloatingOverlayService extends Service {
 
     public static boolean isRunning() {
         return running;
+    }
+
+    public static void updateAnswerPopup(String text, boolean streaming) {
+        FloatingOverlayService svc = instance;
+        if (svc == null) return;
+        svc.mainHandler.post(() -> svc.showAnswerPopupInternal(text, streaming));
+    }
+
+    public static void hideAnswerPopup() {
+        FloatingOverlayService svc = instance;
+        if (svc == null) return;
+        svc.mainHandler.post(svc::removeAnswerPopupInternal);
     }
 
     @Override
@@ -117,6 +141,7 @@ public class FloatingOverlayService extends Service {
         }
 
         running = true;
+        instance = this;
         FloatingOverlayPlugin.emitOverlayState(true);
         return START_NOT_STICKY;
     }
@@ -124,8 +149,10 @@ public class FloatingOverlayService extends Service {
     @Override
     public void onDestroy() {
         running = false;
+        if (instance == this) instance = null;
         FloatingOverlayPlugin.emitOverlayState(false);
 
+        removeAnswerPopupInternal();
         if (rootView != null && windowManager != null) {
             try {
                 windowManager.removeView(rootView);
@@ -417,8 +444,8 @@ public class FloatingOverlayService extends Service {
                     cropped.recycle();
 
                     String base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
+                    showAnswerPopupInternal("Analyzing screen...", true);
                     FloatingOverlayPlugin.emitCapturedScreen(base64);
-                    bringAppToFront();
                 } catch (Exception ignored) {
                 } finally {
                     if (image != null) image.close();
@@ -431,6 +458,126 @@ public class FloatingOverlayService extends Service {
                 }
             }, mainHandler);
         }, 90);
+    }
+
+    private void showAnswerPopupInternal(String text, boolean streaming) {
+        if (windowManager == null) {
+            windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        }
+        if (windowManager == null) return;
+
+        lastAnswerText = text != null ? text : "";
+
+        if (answerPopupView == null) {
+            DisplayMetrics dm = getResources().getDisplayMetrics();
+            int cardWidth = Math.min(dm.widthPixels - dp(28), dp(360));
+            int maxBodyHeight = Math.round(dm.heightPixels * 0.34f);
+
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(dp(14), dp(10), dp(14), dp(12));
+
+            GradientDrawable cardBg = new GradientDrawable();
+            cardBg.setColor(Color.parseColor("#EB101218"));
+            cardBg.setCornerRadius(dp(16));
+            cardBg.setStroke(dp(1), Color.parseColor("#4D4d9cff"));
+            card.setBackground(cardBg);
+            card.setElevation(dp(12));
+
+            // Header row
+            LinearLayout header = new LinearLayout(this);
+            header.setOrientation(LinearLayout.HORIZONTAL);
+            header.setGravity(Gravity.CENTER_VERTICAL);
+            header.setPadding(0, 0, 0, dp(8));
+
+            answerTitleView = new TextView(this);
+            answerTitleView.setText("Invisible");
+            answerTitleView.setTextColor(Color.parseColor("#4d9cff"));
+            answerTitleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+            answerTitleView.setTypeface(null, Typeface.BOLD);
+            LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            answerTitleView.setLayoutParams(titleLp);
+
+            TextView copyBtn = createMenuChip("Copy", "#1a1a22", "#f3f4f8");
+            copyBtn.setOnClickListener(v -> {
+                ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                if (cm != null && lastAnswerText != null && !lastAnswerText.isEmpty()) {
+                    cm.setPrimaryClip(ClipData.newPlainText("Invisible Answer", lastAnswerText));
+                    Toast.makeText(this, "Copied", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            TextView openBtn = createMenuChip("Open", "#1a1a22", "#f3f4f8");
+            openBtn.setOnClickListener(v -> {
+                removeAnswerPopupInternal();
+                bringAppToFront();
+            });
+
+            TextView closeBtn = createMenuChip("×", "#2a1619", "#ff6b6b");
+            closeBtn.setOnClickListener(v -> removeAnswerPopupInternal());
+
+            header.addView(answerTitleView);
+            header.addView(copyBtn);
+            header.addView(openBtn);
+            header.addView(closeBtn);
+
+            answerScrollView = new ScrollView(this);
+            LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            answerScrollView.setLayoutParams(scrollLp);
+
+            answerTextView = new TextView(this);
+            answerTextView.setTextColor(Color.parseColor("#f3f4f8"));
+            answerTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
+            answerTextView.setLineSpacing(dp(3), 1f);
+            answerTextView.setMaxHeight(maxBodyHeight);
+            answerScrollView.addView(answerTextView);
+
+            card.addView(header);
+            card.addView(answerScrollView);
+            answerPopupView = card;
+
+            int layoutType = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                : WindowManager.LayoutParams.TYPE_PHONE;
+
+            WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                cardWidth,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                layoutType,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                    | WindowManager.LayoutParams.FLAG_SECURE,
+                PixelFormat.TRANSLUCENT
+            );
+            lp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+            lp.y = dp(48);
+
+            windowManager.addView(answerPopupView, lp);
+        }
+
+        if (answerTitleView != null) {
+            answerTitleView.setText(streaming ? "Invisible · Live" : "Invisible");
+        }
+        if (answerTextView != null) {
+            answerTextView.setText(lastAnswerText);
+        }
+        if (answerScrollView != null) {
+            answerScrollView.post(() -> answerScrollView.fullScroll(View.FOCUS_DOWN));
+        }
+    }
+
+    private void removeAnswerPopupInternal() {
+        if (answerPopupView != null && windowManager != null) {
+            try {
+                windowManager.removeView(answerPopupView);
+            } catch (Exception ignored) {}
+            answerPopupView = null;
+            answerTextView = null;
+            answerTitleView = null;
+            answerScrollView = null;
+        }
     }
 
     /** Custom drawn obsidian floating bubble with Invisible 4-point star icon. */

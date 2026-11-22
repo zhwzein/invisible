@@ -12,8 +12,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#0b0b0e">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; object-src 'none'; base-uri 'none'; connect-src 'self' https: http:">
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: http: blob:; object-src 'none'; base-uri 'none'; connect-src 'self' https: http:">
   <title>Invisible</title>
+  <style>html,body{background:#0b0b0e;margin:0;}</style>
   <link rel="stylesheet" href="styles.css">
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
@@ -36,17 +37,20 @@
         </div>
       </div>
       <div class="titlebar-controls">
-        <button class="ctrl-btn mobile-only" id="floatingBtn" type="button" title="Floating Overlay" aria-label="Floating Overlay">
+        <button class="ctrl-btn mobile-only" id="floatingBtn" type="button" title="Floating Overlay"
+          aria-label="Floating Overlay">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3" y="4" width="18" height="16" rx="3" />
             <rect x="11" y="10" width="8" height="7" rx="1.5" />
           </svg>
         </button>
-        <a class="ctrl-btn" id="githubBtn" href="https://github.com/zhwzein/invisible" target="_blank" rel="noreferrer noopener" title="Source Code (GitHub)" aria-label="Source Code on GitHub">
+        <button class="ctrl-btn" id="historyBtn" type="button" title="Chat History" aria-label="Chat History">
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21" />
+            <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+            <path d="M3 3v5h5" />
+            <path d="M12 7v5l3 2" />
           </svg>
-        </a>
+        </button>
         <button class="ctrl-btn" id="settingsBtn" type="button" title="Settings" aria-label="Settings">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="3" />
@@ -84,7 +88,13 @@
             d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.2l1-1.6A1.5 1.5 0 0 1 10 3.7h4a1.5 1.5 0 0 1 1.3.7l1 1.6h1.2A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z" />
           <circle cx="12" cy="12.4" r="3.1" />
         </svg>
-        <span>Capture &amp; Analyze</span>
+        <span>Capture</span>
+      </button>
+      <button class="action-btn ghost" id="cropBtn" type="button" title="Capture & Crop Region">
+        <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 2v14a2 2 0 0 0 2 2h14M18 22V8a2 2 0 0 0-2-2H2" />
+        </svg>
+        <span>Crop</span>
       </button>
       <button class="action-btn ghost" id="clearBtn" type="button">
         <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -105,8 +115,9 @@
           </svg>
         </div>
         <h3>Ready when you are</h3>
-        <p class="desktop-only">Press <kbd>Alt+C</kbd> or hit <strong>Capture &amp; Analyze</strong>.</p>
-        <p class="mobile-only">Tap <strong>Float</strong> to overlay over other apps &amp; scan any screen, or pick an image below.</p>
+        <p class="desktop-only">Press <kbd>Alt+C</kbd> or hit <strong>Capture</strong>.</p>
+        <p class="mobile-only">Tap <strong>Float</strong> to overlay over other apps &amp; scan any screen, or pick an
+          image below.</p>
         <div class="welcome-chips desktop-only">
           <span><kbd>Alt+S</kbd> Hide</span>
           <span><kbd>Alt+I</kbd> Type</span>
@@ -128,7 +139,8 @@
     <!-- Follow-up Question -->
     <div id="questionBar">
       <div class="model-bar">
-        <button class="model-picker-btn" id="modelPickerBtn" type="button" title="Switch AI model" aria-haspopup="listbox" aria-expanded="false">
+        <button class="model-picker-btn" id="modelPickerBtn" type="button" title="Switch AI model"
+          aria-haspopup="listbox" aria-expanded="false">
           <svg class="model-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
           </svg>
@@ -140,8 +152,10 @@
 
         <div id="modelPopover" class="model-popover hidden" role="listbox" aria-label="AI Models">
           <div class="model-popover-head">
-            <input type="text" id="modelSearchInput" placeholder="Filter models..." autocomplete="off" spellcheck="false" />
-            <button class="model-refresh-btn" id="modelRefreshBtn" type="button" title="Refresh /models" aria-label="Refresh models">
+            <input type="text" id="modelSearchInput" placeholder="Filter models..." autocomplete="off"
+              spellcheck="false" />
+            <button class="model-refresh-btn" id="modelRefreshBtn" type="button" title="Refresh /models"
+              aria-label="Refresh models">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" />
               </svg>
@@ -152,13 +166,91 @@
         </div>
       </div>
 
+      <div class="preset-bar" id="presetBar" role="group" aria-label="Quick prompts">
+        <button type="button" class="preset-chip" data-prompt="Solve this step by step and give the final answer.">Solve</button>
+        <button type="button" class="preset-chip" data-prompt="Explain this clearly in simple terms.">Explain</button>
+        <button type="button" class="preset-chip" data-prompt="Terjemahkan ke bahasa Indonesia yang natural.">Translate ID</button>
+        <button type="button" class="preset-chip" data-prompt="Find the bug and provide the fixed code.">Fix Code</button>
+        <button type="button" class="preset-chip" data-prompt="Ringkas poin-poin utamanya secara singkat.">Ringkas</button>
+      </div>
+
       <div class="composer">
         <input type="text" id="questionInput" placeholder="Ask a follow-up..." autocomplete="off" />
+        <button class="ctrl-btn mic-btn" id="micBtn" type="button" title="Voice Input" aria-label="Voice Input">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="9" y="2" width="6" height="12" rx="3" />
+            <path d="M5 10a7 7 0 0 0 14 0M12 19v3M8 22h8" />
+          </svg>
+        </button>
         <button class="action-btn small" id="askBtn" type="button" title="Send (Enter)" aria-label="Ask">
           <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M5 12h14M13 6l6 6-6 6" />
           </svg>
         </button>
+        <button class="action-btn small danger hidden" id="stopBtn" type="button" title="Stop generating"
+          aria-label="Stop">
+          <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Chat History Panel -->
+    <div id="historyPanel" class="hidden" role="dialog" aria-label="Chat History">
+      <div class="sheet-head">
+        <h3>Chat History</h3>
+        <div class="history-head-actions">
+          <button class="btn btn-primary btn-sm" id="newChatBtn" type="button">+ New Chat</button>
+          <button class="ctrl-btn" id="closeHistoryBtn" type="button" aria-label="Close history">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="sheet-body">
+        <div id="historyList" class="history-list"></div>
+      </div>
+    </div>
+
+    <!-- Image Preview Lightbox -->
+    <div id="imageLightbox" class="hidden" role="dialog" aria-label="Image preview">
+      <div class="sheet-head">
+        <h3 id="lightboxTitle">Image Preview</h3>
+        <button class="ctrl-btn" id="closeLightboxBtn" type="button" aria-label="Close preview">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+      <div class="lightbox-stage">
+        <img id="lightboxImg" alt="Full size preview" />
+      </div>
+      <div class="lightbox-actions">
+        <button class="btn btn-primary" id="downloadLightboxBtn" type="button">Download Full Size</button>
+      </div>
+    </div>
+
+    <!-- Crop Region Modal -->
+    <div id="cropModal" class="hidden" role="dialog" aria-label="Crop region">
+      <div class="sheet-head">
+        <h3>Select Area</h3>
+        <button class="ctrl-btn" id="cancelCropBtn" type="button" aria-label="Cancel crop">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+      <div class="crop-stage">
+        <canvas id="cropCanvas"></canvas>
+      </div>
+      <div class="crop-actions">
+        <span class="crop-hint">Drag to select region</span>
+        <div class="crop-btn-group">
+          <button class="btn btn-secondary" id="cancelCropFooterBtn" type="button">Cancel</button>
+          <button class="btn btn-primary" id="confirmCropBtn" type="button">Analyze Area</button>
+        </div>
       </div>
     </div>
 
@@ -240,12 +332,19 @@
             restart.</p>
         </div>
 
+        <div class="form-group">
+          <label for="customSystemPromptInput">Custom system prompt <span class="optional">optional</span></label>
+          <textarea id="customSystemPromptInput" rows="3" placeholder="e.g. Selalu jawab dalam bahasa Indonesia secara ringkas dan langsung ke inti."></textarea>
+          <p class="field-hint">Additional instructions applied to every AI response.</p>
+        </div>
+
         <div class="mobile-only">
           <p class="section-label">Floating Overlay</p>
           <div class="floating-card">
             <div class="floating-card-text">
               <span class="toggle-title">Float over other apps</span>
-              <span class="toggle-sub" id="floatingStatusSub">Shows a private bubble over any app to scan what you are viewing.</span>
+              <span class="toggle-sub" id="floatingStatusSub">Shows a private bubble over any app to scan what you are
+                viewing.</span>
             </div>
             <button class="btn btn-primary" id="settingsFloatingBtn" type="button">Start Float</button>
           </div>
@@ -255,12 +354,15 @@
           <p class="section-label">Knowledge folder</p>
 
           <div class="form-group">
-            <label for="knowledgeFolderInput">Folder with PDFs, text, or images <span class="optional">optional</span></label>
+            <label for="knowledgeFolderInput">Folder with PDFs, text, or images <span
+                class="optional">optional</span></label>
             <div class="path-row">
               <input type="text" id="knowledgeFolderInput" placeholder="No folder selected" readonly />
               <button class="btn btn-ghost" id="pickFolderBtn" type="button">Browse</button>
             </div>
-            <p class="field-hint">PDFs and text files are read once and indexed locally; images are sent to the model as pictures. Everything is re-indexed by itself when a file changes, and a screenshot answer also draws on this folder.</p>
+            <p class="field-hint">PDFs and text files are read once and indexed locally; images are sent to the model as
+              pictures. Everything is re-indexed by itself when a file changes, and a screenshot answer also draws on
+              this folder.</p>
           </div>
 
           <div class="knowledge-status" id="knowledgeStatus">
@@ -310,7 +412,7 @@
           <p class="section-label">Shortcuts</p>
           <div class="shortcuts-info">
             <div class="shortcut-item"><kbd>Alt+S</kbd><span>Show / Hide</span></div>
-            <div class="shortcut-item"><kbd>Alt+C</kbd><span>Capture &amp; Analyze</span></div>
+            <div class="shortcut-item"><kbd>Alt+C</kbd><span>Capture</span></div>
             <div class="shortcut-item"><kbd>Alt+I</kbd><span>Focus Input</span></div>
             <div class="shortcut-item"><kbd>Alt+T</kbd><span>Transparency</span></div>
             <div class="shortcut-item"><kbd>Alt+Q</kbd><span>Quit</span></div>
@@ -320,7 +422,8 @@
         <p class="section-label">Source Code</p>
         <a class="source-card" href="https://github.com/zhwzein/invisible" target="_blank" rel="noreferrer noopener">
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21" />
+            <path
+              d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21" />
           </svg>
           <div class="source-card-text">
             <span class="source-card-title">zhwzein/invisible</span>

@@ -33,8 +33,14 @@ public class MainActivity extends BridgeActivity {
         }
 
         View decorView = window.getDecorView();
+        decorView.setBackgroundColor(APP_BG_COLOR);
         WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(window, decorView);
         controller.setAppearanceLightStatusBars(false);
         controller.setAppearanceLightNavigationBars(false);
+
+        // Prevent white flash while WebView initializes after splash screen
+        if (this.bridge != null && this.bridge.getWebView() != null) {
+            this.bridge.getWebView().setBackgroundColor(APP_BG_COLOR);
+        }
     }
 }

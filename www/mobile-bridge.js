@@ -214,5 +214,17 @@
       if (!plugin) return { stopped: false };
       return plugin.stopFloatingOverlay();
     },
+    updateFloatingAnswer: (text, streaming = false) => {
+      const plugin = getFloatingPlugin();
+      if (plugin && typeof plugin.updateFloatingAnswer === 'function') {
+        plugin.updateFloatingAnswer({ text: String(text || ''), streaming: Boolean(streaming) }).catch(() => {});
+      }
+    },
+    hideFloatingAnswer: () => {
+      const plugin = getFloatingPlugin();
+      if (plugin && typeof plugin.hideFloatingAnswer === 'function') {
+        plugin.hideFloatingAnswer().catch(() => {});
+      }
+    },
   };
 })();

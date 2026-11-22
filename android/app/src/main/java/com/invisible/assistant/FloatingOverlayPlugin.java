@@ -172,4 +172,18 @@ public class FloatingOverlayPlugin extends Plugin {
         pendingScreenshotBase64 = null;
         call.resolve(ret);
     }
+
+    @PluginMethod
+    public void updateFloatingAnswer(PluginCall call) {
+        String text = call.getString("text", "");
+        boolean streaming = Boolean.TRUE.equals(call.getBoolean("streaming", false));
+        FloatingOverlayService.updateAnswerPopup(text, streaming);
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void hideFloatingAnswer(PluginCall call) {
+        FloatingOverlayService.hideAnswerPopup();
+        call.resolve();
+    }
 }

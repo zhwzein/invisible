@@ -17,6 +17,7 @@ const DEFAULT_CONFIG = {
   customKey: '',
   customModel: '',
   userContext: '',
+  customSystemPrompt: '',
   knowledgeFolder: '',
   knowledgeEnabled: true,
   opacity: 0.85,
@@ -63,6 +64,7 @@ const customUrlInput = $('customUrlInput');
 const customKeyInput = $('customKeyInput');
 const customModelInput = $('customModelInput');
 const userContextInput = $('userContextInput');
+const customSystemPromptInput = $('customSystemPromptInput');
 
 const knowledgeFolderInput = $('knowledgeFolderInput');
 const pickFolderBtn = $('pickFolderBtn');
@@ -78,6 +80,13 @@ const alwaysOnTopToggle = $('alwaysOnTopToggle');
 const keepFocusToggle = $('keepFocusToggle');
 const closeSettingsBtn = $('closeSettingsBtn');
 const settingsBtn = $('settingsBtn');
+const historyBtn = $('historyBtn');
+const historyPanel = $('historyPanel');
+const closeHistoryBtn = $('closeHistoryBtn');
+const newChatBtn = $('newChatBtn');
+const historyList = $('historyList');
+const presetBar = $('presetBar');
+const micBtn = $('micBtn');
 const floatingBtn = $('floatingBtn');
 const settingsFloatingBtn = $('settingsFloatingBtn');
 const floatingStatusSub = $('floatingStatusSub');
@@ -85,9 +94,16 @@ const minimizeBtn = $('minimizeBtn');
 const closeBtn = $('closeBtn');
 
 const captureBtn = $('captureBtn');
+const cropBtn = $('cropBtn');
 const clearBtn = $('clearBtn');
+const cropModal = $('cropModal');
+const cropCanvas = $('cropCanvas');
+const cancelCropBtn = $('cancelCropBtn');
+const cancelCropFooterBtn = $('cancelCropFooterBtn');
+const confirmCropBtn = $('confirmCropBtn');
 const questionInput = $('questionInput');
 const askBtn = $('askBtn');
+const stopBtn = $('stopBtn');
 const welcomeMsg = $('welcomeMsg');
 const chatLog = $('chatLog');
 const responseArea = $('responseArea');
@@ -139,9 +155,14 @@ function setStatus(type, message) {
 function setBusy(isBusy) {
   busy = isBusy;
   captureBtn.disabled = isBusy;
+  if (cropBtn) cropBtn.disabled = isBusy;
   clearBtn.disabled = isBusy;
   askBtn.disabled = isBusy;
   questionInput.disabled = isBusy;
+  if (stopBtn) {
+    askBtn.classList.toggle('hidden', isBusy);
+    stopBtn.classList.toggle('hidden', !isBusy);
+  }
 }
 
 function showToast(message) {
@@ -179,6 +200,7 @@ function applyConfigToAI() {
   }
 
   if (activeAI) {
+    activeAI.customSystemPrompt = appConfig.customSystemPrompt || '';
     setStatus('ready', readyStatusText());
   } else if (provider === 'custom') {
     setStatus('error', 'No endpoint URL — press the settings icon to add one');
@@ -243,6 +265,7 @@ function openSettingsPanel() {
   customKeyInput.value = appConfig.customKey || '';
   customModelInput.value = appConfig.customModel || '';
   userContextInput.value = appConfig.userContext || '';
+  if (customSystemPromptInput) customSystemPromptInput.value = appConfig.customSystemPrompt || '';
   knowledgeFolderInput.value = appConfig.knowledgeFolder || '';
 
   syncProviderSwitch();
@@ -267,6 +290,7 @@ function persistConfig() {
   appConfig.customKey = customKeyInput.value.trim();
   appConfig.customModel = customModelInput.value.trim();
   appConfig.userContext = userContextInput.value.trim();
+  if (customSystemPromptInput) appConfig.customSystemPrompt = customSystemPromptInput.value.trim();
 
   api.saveConfig(appConfig);
   applyConfigToAI();
@@ -408,13 +432,19 @@ function renderInline(text) {
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/(^|[^\w*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
     .replace(/~~(.+?)~~/g, '<del>$1</del>')
+    .replace(
+      /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g,
+      '<span class="md-image-card"><img class="md-image-preview" src="$2" alt="$1" loading="lazy" data-src="$2" data-alt="$1" /><span class="md-image-bar"><span class="md-image-caption">$1</span><button type="button" class="md-image-download" data-src="$2" data-alt="$1">Download</button></span></span>'
+    )
     .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer noopener">$1</a>');
 }
 
 function markdownToHtml(markdown) {
   const codeBlocks = [];
   let html = escapeHtml(markdown).replace(/```[^\n]*\n?([\s\S]*?)```/g, (_, code) => {
-    codeBlocks.push(`<pre><code>${code.replace(/\n$/, '')}</code></pre>`);
+    codeBlocks.push(
+      `<div class="code-block-wrap"><button type="button" class="code-copy-btn">Copy</button><pre><code>${code.replace(/\n$/, '')}</code></pre></div>`
+    );
     return `\u0000CODE${codeBlocks.length - 1}\u0000`;
   });
 
@@ -574,6 +604,7 @@ function rememberTurn(role, text) {
   if (chatHistory.length > MAX_HISTORY_TURNS) {
     chatHistory = chatHistory.slice(chatHistory.length - MAX_HISTORY_TURNS);
   }
+  saveCurrentSession(role, String(text));
 }
 
 function buildMessage(role) {
@@ -587,7 +618,19 @@ function buildMessage(role) {
   const bubble = document.createElement('div');
   bubble.className = 'msg-bubble';
 
-  msg.append(label, bubble);
+  if (role === 'ai') {
+    const head = document.createElement('div');
+    head.className = 'msg-head';
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'msg-copy-btn';
+    copyBtn.textContent = 'Copy';
+    head.append(label, copyBtn);
+    msg.append(head, bubble);
+  } else {
+    msg.append(label, bubble);
+  }
+
   return { msg, bubble };
 }
 
@@ -619,9 +662,80 @@ function appendAiMessage(text) {
   return msg;
 }
 
-// ─── Response Views ─────────────────────────────────────────────────────────
+// ─── Streaming Response & Cancellation Helper ───────────────────────────────
+let streamingBubble = null;
+let lastFloatingPush = 0;
+let currentAbortController = null;
+let activeRequestId = 0;
+
+function beginRequest() {
+  if (currentAbortController) {
+    try { currentAbortController.abort(); } catch {}
+  }
+  currentAbortController = typeof AbortController === 'function' ? new AbortController() : null;
+  activeRequestId += 1;
+  return { id: activeRequestId, signal: currentAbortController ? currentAbortController.signal : null };
+}
+
+function isStaleRequest(id) {
+  return id !== activeRequestId;
+}
+
+function stopActiveRequest() {
+  if (!busy) return;
+  activeRequestId += 1;
+  if (currentAbortController) {
+    try { currentAbortController.abort(); } catch {}
+    currentAbortController = null;
+  }
+  clearPending();
+  if (streamingBubble) {
+    streamingBubble.bubble.classList.remove('is-streaming');
+    const partial = streamingBubble.body.textContent || '';
+    if (partial.trim()) rememberTurn('assistant', partial);
+    streamingBubble = null;
+  }
+  pushFloatingAnswer('Stopped', false);
+  setBusy(false);
+  setStatus('ready', 'Stopped');
+}
+
+function pushFloatingAnswer(text, streaming) {
+  if (!api || !api.isMobile || !floatingActive || typeof api.updateFloatingAnswer !== 'function') return;
+  const now = Date.now();
+  if (streaming && now - lastFloatingPush < 180) return;
+  lastFloatingPush = now;
+  api.updateFloatingAnswer(text, streaming);
+}
+
+function handleStreamChunk(partialText) {
+  if (!streamingBubble) {
+    clearPending();
+    revealLog();
+    const { msg, bubble } = buildMessage('ai');
+    bubble.classList.add('is-streaming');
+    const body = document.createElement('div');
+    body.className = 'msg-body';
+    bubble.append(body);
+    chatLog.append(msg);
+    streamingBubble = { msg, bubble, body };
+  }
+  streamingBubble.body.innerHTML = markdownToHtml(String(partialText));
+  scrollToEnd();
+  pushFloatingAnswer(partialText, true);
+}
+
 function showResponse(text) {
-  appendAiMessage(text);
+  if (streamingBubble) {
+    streamingBubble.bubble.classList.remove('is-streaming');
+    streamingBubble.body.innerHTML = markdownToHtml(String(text));
+    rememberTurn('assistant', text);
+    streamingBubble = null;
+    scrollToEnd();
+  } else {
+    appendAiMessage(text);
+  }
+  pushFloatingAnswer(text, false);
   setBusy(false);
   setStatus('ready', 'Analysis complete');
 }
@@ -658,6 +772,11 @@ function showLoading(message = 'Analyzing...') {
 function showError(message) {
   setBusy(false);
   clearPending();
+  if (streamingBubble) {
+    streamingBubble.msg.remove();
+    streamingBubble = null;
+  }
+  pushFloatingAnswer(`Error: ${message}`, false);
   revealLog();
 
   const { msg, bubble } = buildMessage('ai');
@@ -709,6 +828,7 @@ function requireAI() {
 // build their history up again as usual.
 async function captureAndAnalyze() {
   if (busy || !requireAI()) return;
+  const req = beginRequest();
   setBusy(true);
   setStatus('working', 'Capturing screen...');
 
@@ -716,21 +836,178 @@ async function captureAndAnalyze() {
 
   try {
     const base64Image = await api.captureScreen();
+    if (isStaleRequest(req.id)) return;
     if (!base64Image) throw new Error('Failed to capture screen');
 
     lastScreenshot = base64Image;
     appendUserMessage('Screenshot');
     showLoading('Analyzing screen...');
-    // A screenshot carries no text to search with, so an empty query is passed:
-    // the main process then sends the folder whole (or what fits) instead of
-    // trying to score it, and the image itself decides what the answer is about.
     await attachKnowledge('');
-    const response = await activeAI.analyzeScreenshot(base64Image, []);
+    if (isStaleRequest(req.id)) return;
+    const response = await activeAI.analyzeScreenshot(
+      base64Image,
+      [],
+      (chunk) => { if (!isStaleRequest(req.id)) handleStreamChunk(chunk); },
+      req.signal
+    );
+    if (isStaleRequest(req.id)) return;
     showResponse(response);
   } catch (err) {
+    if (isStaleRequest(req.id) || err?.name === 'AbortError') return;
     showError(err.message);
   } finally {
-    setBusy(false);
+    if (!isStaleRequest(req.id)) setBusy(false);
+  }
+}
+
+// ─── Region / Area Crop Capture ─────────────────────────────────────────────
+let cropImage = null;
+let cropRect = null;
+let cropDragging = false;
+let cropStart = null;
+
+function drawCropCanvas() {
+  if (!cropImage || !cropCanvas) return;
+  const ctx = cropCanvas.getContext('2d');
+  ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+  ctx.drawImage(cropImage, 0, 0, cropCanvas.width, cropCanvas.height);
+
+  if (cropRect && cropRect.w > 4 && cropRect.h > 4) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+    ctx.clip();
+    ctx.drawImage(cropImage, 0, 0, cropCanvas.width, cropCanvas.height);
+    ctx.restore();
+    ctx.strokeStyle = '#4d9cff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+  }
+}
+
+function openCropModal(base64Image) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onerror = () => resolve(null);
+    img.onload = () => {
+      cropImage = img;
+      cropRect = null;
+      cropModal.classList.remove('hidden');
+
+      const stage = cropCanvas.parentElement;
+      const maxW = Math.max(200, stage.clientWidth - 24);
+      const maxH = Math.max(200, stage.clientHeight - 24);
+      const scale = Math.min(maxW / img.width, maxH / img.height, 1);
+      cropCanvas.width = Math.round(img.width * scale);
+      cropCanvas.height = Math.round(img.height * scale);
+      drawCropCanvas();
+
+      const close = (result) => {
+        cropModal.classList.add('hidden');
+        cancelCropBtn.onclick = null;
+        if (cancelCropFooterBtn) cancelCropFooterBtn.onclick = null;
+        confirmCropBtn.onclick = null;
+        resolve(result);
+      };
+
+      cancelCropBtn.onclick = () => close(null);
+      if (cancelCropFooterBtn) cancelCropFooterBtn.onclick = () => close(null);
+      confirmCropBtn.onclick = () => {
+        if (!cropRect || cropRect.w < 8 || cropRect.h < 8) {
+          return close(base64Image);
+        }
+        const sx = (cropRect.x / cropCanvas.width) * img.width;
+        const sy = (cropRect.y / cropCanvas.height) * img.height;
+        const sw = (cropRect.w / cropCanvas.width) * img.width;
+        const sh = (cropRect.h / cropCanvas.height) * img.height;
+        const out = document.createElement('canvas');
+        out.width = Math.max(1, Math.round(sw));
+        out.height = Math.max(1, Math.round(sh));
+        out.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, out.width, out.height);
+        close(out.toDataURL('image/jpeg', 0.85).split(',')[1] || base64Image);
+      };
+    };
+    img.src = `data:image/jpeg;base64,${base64Image}`;
+  });
+}
+
+if (cropCanvas) {
+  const getPos = (e) => {
+    const r = cropCanvas.getBoundingClientRect();
+    const pt = e.touches ? e.touches[0] : e;
+    return {
+      x: Math.max(0, Math.min(cropCanvas.width, ((pt.clientX - r.left) / r.width) * cropCanvas.width)),
+      y: Math.max(0, Math.min(cropCanvas.height, ((pt.clientY - r.top) / r.height) * cropCanvas.height)),
+    };
+  };
+  const onDown = (e) => {
+    cropDragging = true;
+    cropStart = getPos(e);
+    cropRect = { x: cropStart.x, y: cropStart.y, w: 0, h: 0 };
+  };
+  const onMove = (e) => {
+    if (!cropDragging || !cropStart) return;
+    if (e.cancelable) e.preventDefault();
+    const cur = getPos(e);
+    cropRect = {
+      x: Math.min(cropStart.x, cur.x),
+      y: Math.min(cropStart.y, cur.y),
+      w: Math.abs(cur.x - cropStart.x),
+      h: Math.abs(cur.y - cropStart.y),
+    };
+    drawCropCanvas();
+  };
+  const onUp = () => { cropDragging = false; };
+
+  cropCanvas.addEventListener('mousedown', onDown);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  cropCanvas.addEventListener('touchstart', onDown, { passive: true });
+  cropCanvas.addEventListener('touchmove', onMove, { passive: false });
+  cropCanvas.addEventListener('touchend', onUp);
+}
+
+async function cropAndAnalyze() {
+  if (busy || !requireAI()) return;
+  const req = beginRequest();
+  setBusy(true);
+  setStatus('working', 'Capturing for crop...');
+  try {
+    const raw = await api.captureScreen();
+    if (isStaleRequest(req.id)) return;
+    if (!raw) {
+      setBusy(false);
+      setStatus('ready', readyStatusText());
+      return;
+    }
+    const cropped = await openCropModal(raw);
+    if (isStaleRequest(req.id)) return;
+    if (!cropped) {
+      setBusy(false);
+      setStatus('ready', readyStatusText());
+      return;
+    }
+    chatHistory = [];
+    lastScreenshot = cropped;
+    appendUserMessage('Cropped Area');
+    showLoading('Analyzing area...');
+    await attachKnowledge('');
+    if (isStaleRequest(req.id)) return;
+    const response = await activeAI.analyzeScreenshot(
+      cropped,
+      [],
+      (chunk) => { if (!isStaleRequest(req.id)) handleStreamChunk(chunk); },
+      req.signal
+    );
+    if (isStaleRequest(req.id)) return;
+    showResponse(response);
+  } catch (err) {
+    if (isStaleRequest(req.id) || err?.name === 'AbortError') return;
+    showError(err.message);
+  } finally {
+    if (!isStaleRequest(req.id)) setBusy(false);
   }
 }
 
@@ -738,6 +1015,7 @@ async function askFollowUp() {
   const question = questionInput.value.trim();
   if (!question || busy || !requireAI()) return;
 
+  const req = beginRequest();
   const history = chatHistory.slice();
   questionInput.value = '';
   appendUserMessage(question);
@@ -745,12 +1023,21 @@ async function askFollowUp() {
 
   try {
     await attachKnowledge(question);
-    const response = await activeAI.askFollowUp(question, lastScreenshot, history);
+    if (isStaleRequest(req.id)) return;
+    const response = await activeAI.askFollowUp(
+      question,
+      lastScreenshot,
+      history,
+      (chunk) => { if (!isStaleRequest(req.id)) handleStreamChunk(chunk); },
+      req.signal
+    );
+    if (isStaleRequest(req.id)) return;
     showResponse(response);
   } catch (err) {
+    if (isStaleRequest(req.id) || err?.name === 'AbortError') return;
     showError(err.message);
   } finally {
-    setBusy(false);
+    if (!isStaleRequest(req.id)) setBusy(false);
   }
 }
 
@@ -814,16 +1101,20 @@ closeBtn.addEventListener('click', () => api.quitApp());
 
 // Response actions
 captureBtn.addEventListener('click', captureAndAnalyze);
+if (cropBtn) cropBtn.addEventListener('click', cropAndAnalyze);
 clearBtn.addEventListener('click', clearResponse);
 askBtn.addEventListener('click', askFollowUp);
+if (stopBtn) stopBtn.addEventListener('click', stopActiveRequest);
 questionInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !busy) askFollowUp();
 });
 
-// Escape closes the settings panel or model popover
+// Escape closes the settings panel, history panel, lightbox, or model popover
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    if (!modelPopover.classList.contains('hidden')) closeModelPopover();
+    if (imageLightbox && !imageLightbox.classList.contains('hidden')) closeImageLightbox();
+    else if (historyPanel && !historyPanel.classList.contains('hidden')) closeHistoryPanel();
+    else if (!modelPopover.classList.contains('hidden')) closeModelPopover();
     else if (!settingsPanel.classList.contains('hidden')) closeSettingsPanel();
   }
 });
@@ -1002,6 +1293,7 @@ api.onCaptureStart(() => {
 
 api.onScreenshotCaptured(async (base64Image) => {
   if (!requireAI()) return;
+  const req = beginRequest();
   // Global-hotkey captures also start a fresh context; see captureAndAnalyze.
   chatHistory = [];
   lastScreenshot = base64Image;
@@ -1009,11 +1301,20 @@ api.onScreenshotCaptured(async (base64Image) => {
   showLoading('Analyzing screen...');
   try {
     await attachKnowledge('');
-    showResponse(await activeAI.analyzeScreenshot(base64Image, []));
+    if (isStaleRequest(req.id)) return;
+    const response = await activeAI.analyzeScreenshot(
+      base64Image,
+      [],
+      (chunk) => { if (!isStaleRequest(req.id)) handleStreamChunk(chunk); },
+      req.signal
+    );
+    if (isStaleRequest(req.id)) return;
+    showResponse(response);
   } catch (err) {
+    if (isStaleRequest(req.id) || err?.name === 'AbortError') return;
     showError(err.message);
   } finally {
-    setBusy(false);
+    if (!isStaleRequest(req.id)) setBusy(false);
   }
 });
 
@@ -1043,6 +1344,348 @@ function focusQuestionInput() {
   };
   grab(0);
 }
+
+// ─── Image Preview Lightbox & Full-Size Download ────────────────────────────
+const imageLightbox = $('imageLightbox');
+const lightboxImg = $('lightboxImg');
+const lightboxTitle = $('lightboxTitle');
+const closeLightboxBtn = $('closeLightboxBtn');
+const downloadLightboxBtn = $('downloadLightboxBtn');
+let activeLightboxUrl = '';
+let activeLightboxAlt = '';
+
+function sanitizeFilename(name, url) {
+  const clean = String(name || '').trim().replace(/[^a-zA-Z0-9._-]+/g, '_').replace(/^_+|_+$/g, '');
+  const extMatch = String(url || '').match(/\.(png|jpe?g|webp|gif|svg|bmp)(?:[?#]|$)/i);
+  const ext = extMatch ? `.${extMatch[1].toLowerCase()}` : '.png';
+  if (clean) return clean.endsWith(ext) ? clean : `${clean}${ext}`;
+  return `image${ext}`;
+}
+
+async function downloadImageFullSize(url, alt = '') {
+  if (!url) return;
+  const filename = sanitizeFilename(alt, url);
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objUrl), 5000);
+    showToast(`Downloaded ${filename}`);
+  } catch {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.target = '_blank';
+    a.rel = 'noreferrer noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+}
+
+function openImageLightbox(url, alt = '') {
+  if (!imageLightbox || !lightboxImg) return;
+  activeLightboxUrl = url;
+  activeLightboxAlt = alt;
+  lightboxImg.src = url;
+  lightboxImg.alt = alt || 'Image preview';
+  if (lightboxTitle) lightboxTitle.textContent = alt || 'Image Preview';
+  imageLightbox.classList.remove('hidden');
+}
+
+function closeImageLightbox() {
+  if (!imageLightbox) return;
+  imageLightbox.classList.add('hidden');
+  if (lightboxImg) lightboxImg.src = '';
+}
+
+if (closeLightboxBtn) closeLightboxBtn.addEventListener('click', closeImageLightbox);
+if (downloadLightboxBtn) {
+  downloadLightboxBtn.addEventListener('click', () => {
+    downloadImageFullSize(activeLightboxUrl, activeLightboxAlt);
+  });
+}
+
+chatLog.addEventListener('click', async (e) => {
+  const codeCopyBtn = e.target.closest('.code-copy-btn');
+  if (codeCopyBtn) {
+    const codeEl = codeCopyBtn.parentElement?.querySelector('code');
+    if (codeEl) {
+      try {
+        await navigator.clipboard.writeText(codeEl.textContent || '');
+        codeCopyBtn.textContent = 'Copied';
+        setTimeout(() => { codeCopyBtn.textContent = 'Copy'; }, 1600);
+      } catch {}
+    }
+    return;
+  }
+
+  const msgCopyBtn = e.target.closest('.msg-copy-btn');
+  if (msgCopyBtn) {
+    const msgEl = msgCopyBtn.closest('.msg');
+    const bodyEl = msgEl?.querySelector('.msg-body') || msgEl?.querySelector('.msg-bubble');
+    if (bodyEl) {
+      try {
+        await navigator.clipboard.writeText(bodyEl.innerText || bodyEl.textContent || '');
+        msgCopyBtn.textContent = 'Copied';
+        setTimeout(() => { msgCopyBtn.textContent = 'Copy'; }, 1600);
+      } catch {}
+    }
+    return;
+  }
+
+  const dlBtn = e.target.closest('.md-image-download');
+  if (dlBtn) {
+    e.stopPropagation();
+    downloadImageFullSize(dlBtn.dataset.src, dlBtn.dataset.alt);
+    return;
+  }
+  const img = e.target.closest('.md-image-preview');
+  if (img) {
+    openImageLightbox(img.dataset.src || img.src, img.dataset.alt || img.alt);
+  }
+});
+
+// ─── Prompt Presets ─────────────────────────────────────────────────────────
+if (presetBar) {
+  presetBar.addEventListener('click', (e) => {
+    const chip = e.target.closest('.preset-chip');
+    if (!chip || busy) return;
+    const prompt = chip.dataset.prompt || '';
+    if (!prompt) return;
+    questionInput.value = prompt;
+    askFollowUp();
+  });
+}
+
+// ─── Voice Input (Speech-to-Text) ───────────────────────────────────────────
+let speechRec = null;
+let isListening = false;
+
+function stopVoiceInput() {
+  if (speechRec && isListening) {
+    try { speechRec.stop(); } catch {}
+  }
+  isListening = false;
+  if (micBtn) micBtn.classList.remove('is-listening');
+}
+
+if (micBtn) {
+  micBtn.addEventListener('click', () => {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+      showToast('Voice input not supported on this device');
+      return;
+    }
+    if (isListening) {
+      stopVoiceInput();
+      return;
+    }
+    try {
+      speechRec = new SpeechRec();
+      speechRec.lang = 'id-ID';
+      speechRec.interimResults = true;
+      speechRec.continuous = false;
+
+      const baseText = questionInput.value.trim();
+      speechRec.onstart = () => {
+        isListening = true;
+        micBtn.classList.add('is-listening');
+        setStatus('working', 'Listening...');
+      };
+      speechRec.onresult = (event) => {
+        let transcript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        questionInput.value = baseText ? `${baseText} ${transcript}`.trim() : transcript.trim();
+      };
+      speechRec.onerror = (event) => {
+        stopVoiceInput();
+        setStatus('error', `Voice error: ${event.error || 'failed'}`);
+      };
+      speechRec.onend = () => {
+        stopVoiceInput();
+        setStatus('ready', readyStatusText());
+      };
+      speechRec.start();
+    } catch {
+      stopVoiceInput();
+      showToast('Unable to start microphone');
+    }
+  });
+}
+
+// ─── Local Multi-Session Chat History ───────────────────────────────────────
+const SESSIONS_KEY = 'invisible_sessions_v1';
+let currentSessionId = null;
+
+function loadSessions() {
+  try {
+    const raw = localStorage.getItem(SESSIONS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSessions(sessions) {
+  try {
+    localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions.slice(0, 30)));
+  } catch {}
+}
+
+function saveCurrentSession(role, text) {
+  const sessions = loadSessions();
+  let session = currentSessionId ? sessions.find((s) => s.id === currentSessionId) : null;
+  if (!session) {
+    currentSessionId = `s_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const title = String(text || 'New Chat').replace(/\s+/g, ' ').trim().slice(0, 48) || 'New Chat';
+    session = { id: currentSessionId, title, updatedAt: Date.now(), messages: [] };
+    sessions.unshift(session);
+  }
+  session.messages.push({ role, text });
+  if (session.messages.length > 60) {
+    session.messages = session.messages.slice(session.messages.length - 60);
+  }
+  session.updatedAt = Date.now();
+  sessions.sort((a, b) => b.updatedAt - a.updatedAt);
+  writeSessions(sessions);
+}
+
+function startNewSession() {
+  currentSessionId = null;
+  clearResponse();
+  closeHistoryPanel();
+}
+
+function loadSessionById(id) {
+  const sessions = loadSessions();
+  const session = sessions.find((s) => s.id === id);
+  if (!session) return;
+
+  clearPending();
+  currentSessionId = session.id;
+  chatHistory = [];
+  chatLog.replaceChildren();
+  lastScreenshot = null;
+
+  if (session.messages && session.messages.length) {
+    revealLog();
+    for (const m of session.messages) {
+      const uiRole = m.role === 'user' ? 'user' : 'ai';
+      const { msg, bubble } = buildMessage(uiRole);
+      if (uiRole === 'user') {
+        bubble.textContent = String(m.text);
+      } else {
+        const body = document.createElement('div');
+        body.className = 'msg-body';
+        body.innerHTML = markdownToHtml(String(m.text));
+        bubble.append(body);
+      }
+      chatLog.append(msg);
+      chatHistory.push({ role: m.role, text: String(m.text) });
+    }
+    if (chatHistory.length > MAX_HISTORY_TURNS) {
+      chatHistory = chatHistory.slice(chatHistory.length - MAX_HISTORY_TURNS);
+    }
+    scrollToEnd();
+  } else {
+    chatLog.classList.add('hidden');
+    welcomeMsg.classList.remove('hidden');
+  }
+
+  closeHistoryPanel();
+  showToast(`Loaded: ${session.title}`);
+}
+
+function deleteSessionById(id) {
+  const sessions = loadSessions().filter((s) => s.id !== id);
+  writeSessions(sessions);
+  if (currentSessionId === id) {
+    currentSessionId = null;
+    clearResponse();
+  }
+  renderHistoryList();
+}
+
+function renderHistoryList() {
+  if (!historyList) return;
+  const sessions = loadSessions();
+  historyList.replaceChildren();
+
+  if (!sessions.length) {
+    const empty = document.createElement('div');
+    empty.className = 'history-empty';
+    empty.textContent = 'No saved conversations yet.';
+    historyList.append(empty);
+    return;
+  }
+
+  const frag = document.createDocumentFragment();
+  for (const s of sessions) {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    if (s.id === currentSessionId) item.classList.add('is-active');
+
+    const main = document.createElement('div');
+    main.className = 'history-item-main';
+
+    const title = document.createElement('div');
+    title.className = 'history-item-title';
+    title.textContent = s.title || 'Untitled Chat';
+
+    const meta = document.createElement('div');
+    meta.className = 'history-item-meta';
+    const count = Array.isArray(s.messages) ? s.messages.length : 0;
+    const when = s.updatedAt ? new Date(s.updatedAt).toLocaleString() : '';
+    meta.textContent = `${count} msg${count === 1 ? '' : 's'} · ${when}`;
+
+    main.append(title, meta);
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'history-del-btn';
+    delBtn.textContent = 'Delete';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteSessionById(s.id);
+    });
+
+    item.append(main, delBtn);
+    item.addEventListener('click', () => loadSessionById(s.id));
+    frag.append(item);
+  }
+  historyList.append(frag);
+}
+
+function openHistoryPanel() {
+  if (!historyPanel) return;
+  renderHistoryList();
+  historyPanel.classList.remove('hidden');
+}
+
+function closeHistoryPanel() {
+  if (!historyPanel) return;
+  historyPanel.classList.add('hidden');
+}
+
+if (historyBtn) {
+  historyBtn.addEventListener('click', () => {
+    if (historyPanel.classList.contains('hidden')) openHistoryPanel();
+    else closeHistoryPanel();
+  });
+}
+if (closeHistoryBtn) closeHistoryBtn.addEventListener('click', closeHistoryPanel);
+if (newChatBtn) newChatBtn.addEventListener('click', startNewSession);
 
 // ─── Mobile Floating Overlay ────────────────────────────────────────────────
 let floatingActive = false;
