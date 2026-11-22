@@ -1,0 +1,26 @@
+{
+  "name": "invisible",
+  "productName": "Invisible",
+  "version": "1.0.0",
+  "description": "Stealthy always-on-top AI overlay. Sees your screen, answers instantly, never shows up in recordings.",
+  "main": "main.js",
+  "author": "Zen",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build:web": "node scripts/build-web.js",
+    "android:sync": "node scripts/build-web.js && npx cap sync android",
+    "android:open": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
+    "koffi": "^2.9.0",
+    "pdfjs-dist": "^3.11.174"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
+    "electron": "^33.4.11"
+  }
+}

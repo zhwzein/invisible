@@ -1,0 +1,10 @@
+{
+  "appId": "com.invisible.assistant",
+  "appName": "Invisible",
+  "webDir": "www",
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}

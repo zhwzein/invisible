@@ -1,0 +1,293 @@
+<!--
+  Invisible — UI Layout
+  @author Zen (zhwzein)
+  @github https://github.com/zhwzein/invisible
+  @license MIT
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; object-src 'none'; base-uri 'none'; connect-src 'self'">
+  <title>Invisible</title>
+  <link rel="stylesheet" href="styles.css">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <div id="app">
+    <!-- Title Bar (Draggable) -->
+    <header id="titlebar">
+      <div class="titlebar-left">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M12 0c0 6.627-5.373 12-12 12 6.627 0 12 5.373 12 12 0-6.627 5.373-12 12-12-6.627 0-12-5.373-12-12z" />
+          </svg>
+        </span>
+        <div class="brand-text">
+          <span class="app-title">Invisible</span>
+        </div>
+      </div>
+      <div class="titlebar-controls">
+        <button class="ctrl-btn" id="settingsBtn" type="button" title="Settings" aria-label="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
+        <button class="ctrl-btn" id="minimizeBtn" type="button" title="Minimize" aria-label="Minimize">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12h14" />
+          </svg>
+        </button>
+        <button class="ctrl-btn danger" id="closeBtn" type="button" title="Close (Alt+Q)" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Status Bar -->
+    <div id="statusBar">
+      <div class="status-left">
+        <span class="status-dot" id="statusDot" role="status" aria-label="Status"></span>
+        <span id="statusText"></span>
+      </div>
+      <span id="transparencyBadge" title="Window opacity"></span>
+    </div>
+
+    <!-- Action Buttons -->
+    <div id="actionBar">
+      <button class="action-btn primary" id="captureBtn" type="button">
+        <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.2l1-1.6A1.5 1.5 0 0 1 10 3.7h4a1.5 1.5 0 0 1 1.3.7l1 1.6h1.2A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z" />
+          <circle cx="12" cy="12.4" r="3.1" />
+        </svg>
+        <span>Capture &amp; Analyze</span>
+      </button>
+      <button class="action-btn ghost" id="clearBtn" type="button">
+        <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M4 7h16M9.5 7V5.2A1.2 1.2 0 0 1 10.7 4h2.6a1.2 1.2 0 0 1 1.2 1.2V7M6.5 7l.8 11.1A1.9 1.9 0 0 0 9.2 20h5.6a1.9 1.9 0 0 0 1.9-1.9L17.5 7" />
+        </svg>
+        <span>Clear</span>
+      </button>
+    </div>
+
+    <!-- Response Area -->
+    <section id="responseArea">
+      <div id="welcomeMsg">
+        <div class="welcome-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M12 0c0 6.627-5.373 12-12 12 6.627 0 12 5.373 12 12 0-6.627 5.373-12 12-12-6.627 0-12-5.373-12-12z" />
+          </svg>
+        </div>
+        <h3>Ready when you are</h3>
+        <p>Press <kbd>Alt+C</kbd> or hit <strong>Capture &amp; Analyze</strong>.</p>
+        <div class="welcome-chips">
+          <span><kbd>Alt+S</kbd> Hide</span>
+          <span><kbd>Alt+I</kbd> Type</span>
+          <span><kbd>Alt+T</kbd> Opacity</span>
+        </div>
+        <p class="hint">Invisible to screen recordings &amp; screenshots.</p>
+      </div>
+      <div id="chatLog" class="hidden" role="log" aria-live="polite"></div>
+    </section>
+
+    <!-- Follow-up Question -->
+    <div id="questionBar">
+      <div class="model-bar">
+        <button class="model-picker-btn" id="modelPickerBtn" type="button" title="Switch AI model" aria-haspopup="listbox" aria-expanded="false">
+          <svg class="model-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
+          </svg>
+          <span id="modelPickerLabel">Select model</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 15l6-6 6 6" />
+          </svg>
+        </button>
+
+        <div id="modelPopover" class="model-popover hidden" role="listbox" aria-label="AI Models">
+          <div class="model-popover-head">
+            <input type="text" id="modelSearchInput" placeholder="Filter models..." autocomplete="off" spellcheck="false" />
+            <button class="model-refresh-btn" id="modelRefreshBtn" type="button" title="Refresh /models" aria-label="Refresh models">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" />
+              </svg>
+            </button>
+          </div>
+          <div id="modelListStatus" class="model-list-status hidden"></div>
+          <div id="modelList" class="model-list"></div>
+        </div>
+      </div>
+
+      <div class="composer">
+        <input type="text" id="questionInput" placeholder="Ask a follow-up..." autocomplete="off" />
+        <button class="action-btn small" id="askBtn" type="button" title="Send (Enter)" aria-label="Ask">
+          <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settingsPanel" class="hidden">
+      <div class="sheet-head">
+        <h3>Settings</h3>
+        <button class="ctrl-btn" id="closeSettingsBtn" type="button" aria-label="Close settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="sheet-body">
+        <p class="section-label">Provider</p>
+        <div class="segmented" id="providerSwitch" role="group" aria-label="AI Provider">
+          <button type="button" data-provider="gemini">Gemini</button>
+          <button type="button" data-provider="openrouter">OpenRouter</button>
+          <button type="button" data-provider="custom">Custom URL</button>
+        </div>
+
+        <div id="geminiSettings" class="provider-settings">
+          <div class="form-group">
+            <label for="geminiKeyInput">API Key</label>
+            <input type="password" id="geminiKeyInput" placeholder="AIza..." autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="form-group">
+            <label for="geminiModelInput">Model</label>
+            <input type="text" id="geminiModelInput" placeholder="gemini-2.0-flash" autocomplete="off"
+              spellcheck="false" />
+          </div>
+        </div>
+
+        <div id="openrouterSettings" class="provider-settings hidden">
+          <div class="form-group">
+            <label for="openrouterKeyInput">API Key</label>
+            <input type="password" id="openrouterKeyInput" placeholder="sk-or-v1-..." autocomplete="off"
+              spellcheck="false" />
+          </div>
+          <div class="form-group">
+            <label for="openrouterModelInput">Model</label>
+            <input type="text" id="openrouterModelInput" placeholder="openai/gpt-4o" autocomplete="off"
+              spellcheck="false" />
+          </div>
+        </div>
+
+        <div id="customSettings" class="provider-settings hidden">
+          <div class="form-group">
+            <label for="customUrlInput">Endpoint URL</label>
+            <input type="text" id="customUrlInput" placeholder="https://hisoka.ai/api/v1" autocomplete="off"
+              spellcheck="false" />
+            <p class="field-hint">Base URL or full <code>chat/completions</code> URL. <code>/models</code>, missing
+              scheme and missing path are all filled in automatically.</p>
+          </div>
+          <div class="form-group">
+            <label for="customKeyInput">API Key <span class="optional">optional</span></label>
+            <input type="password" id="customKeyInput" placeholder="Leave empty if not required" autocomplete="off"
+              spellcheck="false" />
+          </div>
+          <div class="form-group">
+            <label for="customModelInput">Model <span class="optional">optional</span></label>
+            <input type="text" id="customModelInput" placeholder="e.g. llama-3.2-90b-vision" autocomplete="off"
+              spellcheck="false" />
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="saveKeyBtn" type="button">Save</button>
+        </div>
+
+        <p class="section-label">About you</p>
+
+        <div class="form-group">
+          <label for="userContextInput">Name &amp; context <span class="optional">optional</span></label>
+          <input type="text" id="userContextInput" placeholder="e.g. Andra, final-year CS student" autocomplete="off"
+            spellcheck="false" />
+          <p class="field-hint">Sent with every request so the assistant remembers you between turns and after a
+            restart.</p>
+        </div>
+
+        <p class="section-label">Knowledge folder</p>
+
+        <div class="form-group">
+          <label for="knowledgeFolderInput">Folder with PDFs, text, or images <span class="optional">optional</span></label>
+          <div class="path-row">
+            <input type="text" id="knowledgeFolderInput" placeholder="No folder selected" readonly />
+            <button class="btn btn-ghost" id="pickFolderBtn" type="button">Browse</button>
+          </div>
+          <p class="field-hint">PDFs and text files are read once and indexed locally; images are sent to the model as pictures. Everything is re-indexed by itself when a file changes, and a screenshot answer also draws on this folder.</p>
+        </div>
+
+        <div class="knowledge-status" id="knowledgeStatus">
+          <span class="knowledge-dot" aria-hidden="true"></span>
+          <span id="knowledgeStatusText">No folder selected</span>
+          <button class="link-btn" id="reindexBtn" type="button">Re-index</button>
+        </div>
+
+        <label class="toggle-row" for="knowledgeToggle">
+          <span class="toggle-text">
+            <span class="toggle-title">Use knowledge folder</span>
+            <span class="toggle-sub">Attach matching passages and the newest images</span>
+          </span>
+          <input type="checkbox" id="knowledgeToggle" checked tabindex="-1" />
+          <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+        </label>
+
+        <p class="section-label">Window</p>
+
+        <div class="slider-row">
+          <div class="slider-head">
+            <span>Transparency</span>
+            <span class="slider-value" id="opacityValue">85%</span>
+          </div>
+          <input type="range" id="opacitySlider" min="20" max="100" step="1" value="85"
+            aria-label="Window transparency" />
+        </div>
+
+        <label class="toggle-row" for="alwaysOnTopToggle">
+          <span class="toggle-text">
+            <span class="toggle-title">Always on top</span>
+            <span class="toggle-sub">Keep the overlay above other windows</span>
+          </span>
+          <input type="checkbox" id="alwaysOnTopToggle" checked tabindex="-1" />
+          <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+        </label>
+
+        <label class="toggle-row" for="keepFocusToggle">
+          <span class="toggle-text">
+            <span class="toggle-title">Keep focus</span>
+            <span class="toggle-sub">Stay focused after clicking the overlay (restarts apply)</span>
+          </span>
+          <input type="checkbox" id="keepFocusToggle" tabindex="-1" />
+          <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+        </label>
+
+        <p class="section-label">Shortcuts</p>
+        <div class="shortcuts-info">
+          <div class="shortcut-item"><kbd>Alt+S</kbd><span>Show / Hide</span></div>
+          <div class="shortcut-item"><kbd>Alt+C</kbd><span>Capture &amp; Analyze</span></div>
+          <div class="shortcut-item"><kbd>Alt+I</kbd><span>Focus Input</span></div>
+          <div class="shortcut-item"><kbd>Alt+T</kbd><span>Transparency</span></div>
+          <div class="shortcut-item"><kbd>Alt+Q</kbd><span>Quit</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../lib/providers.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>
